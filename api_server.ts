@@ -478,7 +478,12 @@ if (fs.existsSync(frontendPath)) {
   app.use(express.static(frontendPath));
 
   // Serve index.html for all non-API routes (SPA support)
-  app.get('*', (req, res) => {
+  app.use((req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      return next();
+    }
+    // Serve index.html for all other routes (client-side routing)
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
 
