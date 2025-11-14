@@ -1,0 +1,137 @@
+import { useState, useEffect, useCallback } from 'react';
+import NetworkGraph from './components/NetworkGraph';
+import Sidebar from './components/Sidebar';
+import RightSidebar from './components/RightSidebar';
+import { fetchStats, fetchRelationships, fetchActorRelationships, fetchTagClusters } from './api';
+import type { Stats, Relationship, TagCluster } from './types';
+
+function App() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [tagClusters, setTagClusters] = useState<TagCluster[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedActor, setSelectedActor] = useState<string | null>(null);
+  const [actorRelationships, setActorRelationships] = useState<Relationship[]>([]);
+  const [limit, setLimit] = useState(15000);
+  const [enabledClusterIds, setEnabledClusterIds] = useState<Set<number>>(new Set());
+
+  // Load tag clusters on mount
+  useEffect(() => {
+    const loadTagClusters = async () => {
+      try {
+        const clusters = await fetchTagClusters();
+        setTagClusters(clusters);
+        // Enable all clusters by default
+        setEnabledClusterIds(new Set(clusters.map(c => c.id)));
+      } catch (error) {
+        console.error('Error loading tag clusters:', error);
+      }
+    };
+    loadTagClusters();
+  }, []);
+
+  // Load data when limit or enabled clusters change (but only after clusters are loaded)
+  useEffect(() => {
+    if (tagClusters.length > 0) {
+      loadData();
+    }
+  }, [limit, enabledClusterIds, tagClusters.length]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const clusterIds = Array.from(enabledClusterIds);
+      const [statsData, relationshipsData] = await Promise.all([
+        fetchStats(),
+        fetchRelationships(limit, clusterIds)
+      ]);
+      setStats(statsData);
+      setRelationships(relationshipsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActorClick = useCallback((actorName: string) => {
+    setSelectedActor(prev => prev === actorName ? null : actorName);
+  }, []);
+
+  // Toggle tag cluster
+  const toggleCluster = useCallback((clusterId: number) => {
+    setEnabledClusterIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clusterId)) {
+        next.delete(clusterId);
+      } else {
+        next.add(clusterId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Fetch actor-specific relationships when an actor is selected or clusters change
+  useEffect(() => {
+    if (!selectedActor) {
+      setActorRelationships([]);
+      return;
+    }
+
+    const loadActorRelationships = async () => {
+      try {
+        const clusterIds = Array.from(enabledClusterIds);
+        const data = await fetchActorRelationships(selectedActor, clusterIds);
+        setActorRelationships(data);
+      } catch (error) {
+        console.error('Error loading actor relationships:', error);
+        setActorRelationships([]);
+      }
+    };
+
+    loadActorRelationships();
+  }, [selectedActor, enabledClusterIds]);
+
+  return (
+    <div className="flex h-screen bg-gray-900 text-white">
+      <Sidebar
+        stats={stats}
+        selectedActor={selectedActor}
+        onActorSelect={setSelectedActor}
+        limit={limit}
+        onLimitChange={setLimit}
+        tagClusters={tagClusters}
+        enabledClusterIds={enabledClusterIds}
+        onToggleCluster={toggleCluster}
+      />
+
+      <div className="flex-1 relative">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading network data...</p>
+            </div>
+          </div>
+        ) : (
+          <NetworkGraph
+            relationships={relationships}
+            selectedActor={selectedActor}
+            onActorClick={handleActorClick}
+          />
+        )}
+      </div>
+
+      {selectedActor && (
+        <RightSidebar
+          selectedActor={selectedActor}
+          relationships={actorRelationships}
+          totalRelationships={actorRelationships.length}
+          onClose={() => setSelectedActor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+export default App;
