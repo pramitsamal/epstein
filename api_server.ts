@@ -472,6 +472,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Serve static frontend files
+const frontendPath = path.join(process.cwd(), 'network-ui', 'dist');
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+
+  // Serve index.html for all non-API routes (SPA support)
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+
+  console.log(`✓ Serving frontend from ${frontendPath}`);
+} else {
+  console.log(`⚠ Frontend build not found at ${frontendPath}`);
+}
+
 const server = app.listen(PORT, () => {
   console.log(`\n🚀 API Server running at http://localhost:${PORT}`);
   console.log(`📊 Network UI will connect to this server\n`);
