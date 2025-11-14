@@ -139,7 +139,7 @@ export default function Sidebar({
                   >
                     <div className="font-medium text-white">{actor.name}</div>
                     <div className="text-xs text-gray-400">
-                      {actor.relationshipCount} relationships
+                      {actor.connection_count} relationships
                     </div>
                   </button>
                 ))
