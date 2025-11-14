@@ -12,12 +12,11 @@ network-ui/build/
 .env.local
 .env.production
 
-# Database files
-*.db
+# Database files (but keep the main database)
 *.db-shm
 *.db-wal
-*.sqlite
-*.sqlite3
+*_backup_*.db
+backup_*.db
 
 # Backup files
 *.zip
