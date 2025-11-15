@@ -7,13 +7,16 @@ import { fetchStats, fetchRelationships, fetchActorRelationships, fetchTagCluste
 import type { Stats, Relationship, TagCluster } from './types';
 
 function App() {
+  // Detect if mobile on initial load (lg breakpoint is 1024px in Tailwind)
+  const isMobile = window.innerWidth < 1024;
+
   const [stats, setStats] = useState<Stats | null>(null);
   const [tagClusters, setTagClusters] = useState<TagCluster[]>([]);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedActor, setSelectedActor] = useState<string | null>(null);
   const [actorRelationships, setActorRelationships] = useState<Relationship[]>([]);
-  const [limit, setLimit] = useState(5000);
+  const [limit, setLimit] = useState(isMobile ? 5000 : 15000);
   const [enabledClusterIds, setEnabledClusterIds] = useState<Set<number>>(new Set());
 
   // Load tag clusters on mount
