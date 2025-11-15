@@ -23,9 +23,12 @@ app.use(cors({
     }
 
     // Allow Render deployment domains (*.onrender.com)
-    if (origin.includes('.onrender.com')) {
+    if (origin && (origin.includes('.onrender.com') || origin.endsWith('onrender.com'))) {
       return callback(null, true);
     }
+
+    // Log rejected origins for debugging
+    console.warn(`CORS blocked origin: ${origin}`);
 
     // Reject other origins
     callback(new Error('Not allowed by CORS'));
