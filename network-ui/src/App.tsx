@@ -13,7 +13,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [selectedActor, setSelectedActor] = useState<string | null>(null);
   const [actorRelationships, setActorRelationships] = useState<Relationship[]>([]);
-  const [limit, setLimit] = useState(15000);
+  const [limit, setLimit] = useState(5000);
   const [enabledClusterIds, setEnabledClusterIds] = useState<Set<number>>(new Set());
 
   // Load tag clusters on mount

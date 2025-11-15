@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { searchActors } from '../api';
-import type { Actor, Stats, TagCluster } from '../types';
+import type { Actor, Stats, TagCluster, Relationship } from '../types';
+import DocumentModal from './DocumentModal';
 
 interface MobileBottomNavProps {
   stats: Stats | null;
@@ -11,7 +12,7 @@ interface MobileBottomNavProps {
   tagClusters: TagCluster[];
   enabledClusterIds: Set<number>;
   onToggleCluster: (clusterId: number) => void;
-  relationships: any[];
+  relationships: Relationship[];
 }
 
 type Tab = 'search' | 'timeline' | 'filters';
@@ -31,6 +32,7 @@ export default function MobileBottomNav({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Actor[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [documentToView, setDocumentToView] = useState<string | null>(null);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -125,15 +127,24 @@ export default function MobileBottomNav({
               {relationships.length > 0 ? (
                 <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                   {relationships.slice(0, 50).map((rel, idx) => (
-                    <div key={idx} className="bg-gray-700 rounded-lg p-3">
+                    <button
+                      key={idx}
+                      onClick={() => setDocumentToView(rel.doc_id)}
+                      className="w-full bg-gray-700 hover:bg-gray-600 rounded-lg p-3 text-left transition-colors"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-sm">{rel.source}</div>
-                        <div className="text-xs text-gray-400">{rel.category}</div>
+                        <div className="font-medium text-sm">{rel.actor}</div>
+                        {rel.timestamp && (
+                          <div className="text-xs text-gray-400">{rel.timestamp}</div>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-300 mb-1">{rel.relation}</div>
+                      <div className="text-xs text-gray-300 mb-1">{rel.action}</div>
                       <div className="text-sm text-blue-400">{rel.target}</div>
+                      {rel.location && (
+                        <div className="text-xs text-purple-400 mt-1">{rel.location}</div>
+                      )}
                       <div className="text-xs text-gray-500 mt-2">{rel.doc_id}</div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -281,6 +292,23 @@ export default function MobileBottomNav({
           </button>
         </div>
       </div>
+
+      {/* Document Modal */}
+      {documentToView && (() => {
+        const rel = relationships.find(r => r.doc_id === documentToView);
+        return rel ? (
+          <DocumentModal
+            docId={documentToView}
+            highlightTerm={selectedActor || rel.actor}
+            secondaryHighlightTerm={
+              selectedActor
+                ? (rel.actor === selectedActor ? rel.target : rel.actor)
+                : rel.target
+            }
+            onClose={() => setDocumentToView(null)}
+          />
+        ) : null;
+      })()}
     </>
   );
 }
