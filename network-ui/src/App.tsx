@@ -19,7 +19,7 @@ function App() {
   const [selectedActor, setSelectedActor] = useState<string | null>(null);
   const [actorRelationships, setActorRelationships] = useState<Relationship[]>([]);
   const [actorTotalBeforeFilter, setActorTotalBeforeFilter] = useState<number>(0);
-  const [limit, setLimit] = useState(isMobile ? 3000 : 9600);
+  const [limit, setLimit] = useState(isMobile ? 5000 : 9600);
   const [maxHops, setMaxHops] = useState<number | null>(3); // Default 3 hops
   const [minDensity, setMinDensity] = useState(50); // Default 50% density threshold
   const [enabledClusterIds, setEnabledClusterIds] = useState<Set<number>>(new Set());

@@ -53,7 +53,9 @@ export default function Sidebar({
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [contentFiltersExpanded, setContentFiltersExpanded] = useState(false);
   const [localYearRange, setLocalYearRange] = useState<[number, number]>(yearRange);
+  const [localLimit, setLocalLimit] = useState(limit);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const limitDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [minSliderZIndex, setMinSliderZIndex] = useState(4);
   const [maxSliderZIndex, setMaxSliderZIndex] = useState(3);
 
@@ -85,6 +87,11 @@ export default function Sidebar({
     setLocalYearRange(yearRange);
   }, [yearRange]);
 
+  // Sync external limit changes to local state
+  useEffect(() => {
+    setLocalLimit(limit);
+  }, [limit]);
+
   // Debounce year range changes
   const handleYearRangeChange = (newRange: [number, number]) => {
     setLocalYearRange(newRange);
@@ -99,6 +106,30 @@ export default function Sidebar({
       onYearRangeChange(newRange);
     }, 2000);
   };
+
+  // Debounce limit changes
+  const handleLimitChange = (newLimit: number) => {
+    setLocalLimit(newLimit);
+
+    // Clear existing timer
+    if (limitDebounceTimerRef.current) {
+      clearTimeout(limitDebounceTimerRef.current);
+    }
+
+    // Set new timer for 2 seconds
+    limitDebounceTimerRef.current = setTimeout(() => {
+      onLimitChange(newLimit);
+    }, 2000);
+  };
+
+  // Cleanup debounce timers
+  useEffect(() => {
+    return () => {
+      if (limitDebounceTimerRef.current) {
+        clearTimeout(limitDebounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Handle mouse movement over slider to dynamically adjust z-index based on proximity
   const handleSliderMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -177,15 +208,15 @@ export default function Sidebar({
         {/* Limit Slider */}
         <div className="mb-4">
           <label className="block text-sm text-gray-400 mb-2">
-            Relationships to display: {limit.toLocaleString()}
+            Relationships to display: {localLimit.toLocaleString()}
           </label>
           <input
             type="range"
             min="100"
             max="25000"
             step="500"
-            value={limit}
-            onChange={(e) => onLimitChange(parseInt(e.target.value))}
+            value={localLimit}
+            onChange={(e) => handleLimitChange(parseInt(e.target.value))}
             className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
         </div>

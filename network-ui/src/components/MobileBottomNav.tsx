@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { searchActors } from '../api';
 import type { Actor, Stats, TagCluster, Relationship } from '../types';
 import DocumentModal from './DocumentModal';
@@ -37,6 +37,35 @@ export default function MobileBottomNav({
   const [searchResults, setSearchResults] = useState<Actor[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [documentToView, setDocumentToView] = useState<string | null>(null);
+  const [localLimit, setLocalLimit] = useState(limit);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update local limit when prop changes
+  useEffect(() => {
+    setLocalLimit(limit);
+  }, [limit]);
+
+  // Debounce the limit change
+  const handleLimitChange = (newLimit: number) => {
+    setLocalLimit(newLimit);
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      onLimitChange(newLimit);
+    }, 2000);
+  };
+
+  // Cleanup debounce timer
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -186,15 +215,15 @@ export default function MobileBottomNav({
 
               <div className="mb-6">
                 <label className="block text-sm text-gray-400 mb-2">
-                  Relationships: {limit.toLocaleString()}
+                  Relationships: {localLimit.toLocaleString()}
                 </label>
                 <input
                   type="range"
-                  min="100"
-                  max="5000"
+                  min="500"
+                  max="15000"
                   step="100"
-                  value={limit}
-                  onChange={(e) => onLimitChange(parseInt(e.target.value))}
+                  value={localLimit}
+                  onChange={(e) => handleLimitChange(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
