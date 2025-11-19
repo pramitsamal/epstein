@@ -613,6 +613,70 @@ app.get('/api/search', (req, res) => {
   }
 });
 
+// Get total relationship counts for top N actors (unfiltered totals)
+app.get('/api/actor-counts', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 300;
+
+    // Fetch all relationships WITHOUT filters to get true totals
+    const allRelationships = db.prepare(`
+      SELECT
+        COALESCE(ea_actor.canonical_name, rt.actor) as actor,
+        COALESCE(ea_target.canonical_name, rt.target) as target
+      FROM rdf_triples rt
+      LEFT JOIN entity_aliases ea_actor ON rt.actor = ea_actor.original_name
+      LEFT JOIN entity_aliases ea_target ON rt.target = ea_target.original_name
+      WHERE (rt.timestamp IS NULL OR rt.timestamp >= '1970-01-01')
+    `).all() as Array<{
+      actor: string;
+      target: string;
+    }>;
+
+    // Count relationships per actor
+    const actorCounts = new Map<string, number>();
+    allRelationships.forEach(rel => {
+      actorCounts.set(rel.actor, (actorCounts.get(rel.actor) || 0) + 1);
+      actorCounts.set(rel.target, (actorCounts.get(rel.target) || 0) + 1);
+    });
+
+    // Get top N actors
+    const topActors = Array.from(actorCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .reduce((acc, [name, count]) => {
+        acc[name] = count;
+        return acc;
+      }, {} as Record<string, number>);
+
+    res.json(topActors);
+  } catch (error) {
+    console.error('Error in /api/actor-counts:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
+// Get total relationship count for a specific actor (unfiltered total)
+app.get('/api/actor/:name/count', (req, res) => {
+  try {
+    const name = req.params.name;
+
+    // Count total relationships for this actor WITHOUT filters
+    const result = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM rdf_triples rt
+      LEFT JOIN entity_aliases ea_actor ON rt.actor = ea_actor.original_name
+      LEFT JOIN entity_aliases ea_target ON rt.target = ea_target.original_name
+      WHERE (COALESCE(ea_actor.canonical_name, rt.actor) = ? OR COALESCE(ea_target.canonical_name, rt.target) = ?)
+      AND (rt.timestamp IS NULL OR rt.timestamp >= '1970-01-01')
+    `).get(name, name) as { count: number };
+
+    res.json({ count: result.count });
+  } catch (error) {
+    console.error('Error in /api/actor/:name/count:', error);
+    res.status(500).json({ error: 'An internal error occurred' });
+  }
+});
+
 // Get document by doc_id
 app.get('/api/document/:docId', (req, res) => {
   try {

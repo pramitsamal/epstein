@@ -25,6 +25,7 @@ export interface GraphNode {
   id: string;
   name: string;
   val: number;
+  totalVal?: number;
   color?: string;
   baseColor?: string;
 }

@@ -82,3 +82,18 @@ export async function fetchDocumentText(docId: string): Promise<{ text: string }
   if (!response.ok) throw new Error('Failed to fetch document text');
   return response.json();
 }
+
+export async function fetchActorCounts(limit: number = 300): Promise<Record<string, number>> {
+  const params = new URLSearchParams({ limit: limit.toString() });
+  const response = await fetch(`${API_BASE}/actor-counts?${params}`);
+  if (!response.ok) throw new Error('Failed to fetch actor counts');
+  return response.json();
+}
+
+export async function fetchActorCount(name: string): Promise<number> {
+  const url = `${API_BASE}/actor/${encodeURIComponent(name)}/count`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to fetch actor count');
+  const data = await response.json();
+  return data.count;
+}

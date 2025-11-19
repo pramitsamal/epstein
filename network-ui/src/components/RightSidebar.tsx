@@ -113,7 +113,7 @@ export default function RightSidebar({ selectedActor, relationships, totalRelati
               /* Active Filter Display */
               <div className="flex items-center justify-between bg-blue-900/30 border border-blue-700/50 rounded px-2 py-1">
                 <div>
-                  <div className="text-xs text-gray-400">Filtered by actor:</div>
+                  <div className="text-xs text-gray-400">Filtered by entity:</div>
                   <div className="text-sm text-blue-300 font-medium">{filterActor}</div>
                 </div>
                 <button
@@ -129,7 +129,7 @@ export default function RightSidebar({ selectedActor, relationships, totalRelati
             ) : (
               <>
                 <label className="block text-xs text-gray-400 mb-1">
-                  Filter by actor:
+                  Filter by entity:
                 </label>
                 <input
                   type="text"

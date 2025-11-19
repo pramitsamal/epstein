@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import MobileBottomNav from './components/MobileBottomNav';
 import { WelcomeModal } from './components/WelcomeModal';
-import { fetchStats, fetchRelationships, fetchActorRelationships, fetchTagClusters } from './api';
+import { fetchStats, fetchRelationships, fetchActorRelationships, fetchTagClusters, fetchActorCounts } from './api';
 import type { Stats, Relationship, TagCluster } from './types';
 
 function App() {
@@ -27,6 +27,7 @@ function App() {
   const [yearRange, setYearRange] = useState<[number, number]>([1980, 2025]);
   const [includeUndated, setIncludeUndated] = useState(false);
   const [keywords, setKeywords] = useState('');
+  const [actorTotalCounts, setActorTotalCounts] = useState<Record<string, number>>({});
   const [showWelcome, setShowWelcome] = useState(() => {
     // Check if user has seen the welcome message before
     return !localStorage.getItem('hasSeenWelcome');
@@ -67,13 +68,15 @@ function App() {
       setLoading(true);
       const clusterIds = Array.from(enabledClusterIds);
       const categories = Array.from(enabledCategories);
-      const [statsData, relationshipsResponse] = await Promise.all([
+      const [statsData, relationshipsResponse, actorCounts] = await Promise.all([
         fetchStats(),
-        fetchRelationships(limit, clusterIds, categories, yearRange, includeUndated, keywords, maxHops)
+        fetchRelationships(limit, clusterIds, categories, yearRange, includeUndated, keywords, maxHops),
+        fetchActorCounts(300)
       ]);
       setStats(statsData);
       setRelationships(relationshipsResponse.relationships);
       setTotalBeforeLimit(relationshipsResponse.totalBeforeLimit);
+      setActorTotalCounts(actorCounts);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -185,6 +188,7 @@ function App() {
             selectedActor={selectedActor}
             onActorClick={handleActorClick}
             minDensity={minDensity}
+            actorTotalCounts={actorTotalCounts}
           />
         )}
       </div>

@@ -1,19 +1,22 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import * as d3 from 'd3';
 import type { Relationship, GraphNode, GraphLink } from '../types';
+import { fetchActorCount } from '../api';
 
 interface NetworkGraphProps {
   relationships: Relationship[];
   selectedActor: string | null;
   onActorClick: (actorName: string) => void;
   minDensity: number;
+  actorTotalCounts: Record<string, number>;
 }
 
 export default function NetworkGraph({
   relationships,
   selectedActor,
   onActorClick,
-  minDensity
+  minDensity,
+  actorTotalCounts
 }: NetworkGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
@@ -21,6 +24,7 @@ export default function NetworkGraph({
   const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const nodeGroupRef = useRef<d3.Selection<SVGGElement, GraphNode, SVGGElement, unknown> | null>(null);
   const linkGroupRef = useRef<d3.Selection<SVGLineElement, GraphLink, SVGGElement, unknown> | null>(null);
+  const [onDemandCounts, setOnDemandCounts] = useState<Record<string, number>>({});
 
   const graphData = useMemo(() => {
     const nodeMap = new Map<string, GraphNode>();
@@ -168,11 +172,31 @@ export default function NetworkGraph({
       }
     }
 
+    // Store total connections before density filtering
+    const totalConnectionsMap = new Map<string, number>();
+    for (const node of nodeMap.values()) {
+      totalConnectionsMap.set(node.id, node.val);
+    }
+
     // Filter links to only include nodes we're keeping
     const filteredLinks = links.filter(link => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
       return nodesToKeep.has(sourceId) && nodesToKeep.has(targetId);
+    });
+
+    // Recalculate connection counts after density filtering (sum the count field for deduplicated edges)
+    const filteredConnectionsMap = new Map<string, number>();
+    for (const node of nodeMap.values()) {
+      filteredConnectionsMap.set(node.id, 0);
+    }
+
+    filteredLinks.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const count = (link as any).count || 1;
+      filteredConnectionsMap.set(sourceId, (filteredConnectionsMap.get(sourceId) || 0) + count);
+      filteredConnectionsMap.set(targetId, (filteredConnectionsMap.get(targetId) || 0) + count);
     });
 
     // Color nodes based on direct connections to Epstein and distance
@@ -203,6 +227,8 @@ export default function NetworkGraph({
 
       return {
         ...node,
+        val: filteredConnectionsMap.get(node.id) || 0, // Filtered connection count
+        totalVal: totalConnectionsMap.get(node.id) || 0, // Total before density filtering
         color,
         baseColor: color // Store base color for resetting
       };
@@ -358,10 +384,35 @@ export default function NetworkGraph({
       .style('pointer-events', 'none')
       .style('z-index', '1000');
 
-    node.on('mouseover', (event, d) => {
-      tooltip
-        .style('visibility', 'visible')
-        .html(`<strong>${d.name}</strong><br/>${d.val} connections`);
+    node.on('mouseover', async (event, d) => {
+      // Get total count from cache or fetch on-demand
+      let totalCount = actorTotalCounts[d.name] || onDemandCounts[d.name];
+
+      if (totalCount === undefined) {
+        // Show loading state
+        tooltip
+          .style('visibility', 'visible')
+          .html(`<strong>${d.name}</strong><br/>${d.val} connections<br/>(loading total...)`);
+
+        // Fetch on-demand
+        try {
+          const count = await fetchActorCount(d.name);
+          setOnDemandCounts(prev => ({ ...prev, [d.name]: count }));
+          totalCount = count;
+
+          // Update tooltip with fetched count
+          tooltip
+            .html(`<strong>${d.name}</strong><br/>${d.val} connections<br/>(${totalCount} total)`);
+        } catch (error) {
+          console.error('Error fetching actor count:', error);
+          tooltip
+            .html(`<strong>${d.name}</strong><br/>${d.val} connections`);
+        }
+      } else {
+        tooltip
+          .style('visibility', 'visible')
+          .html(`<strong>${d.name}</strong><br/>${d.val} connections<br/>(${totalCount} total)`);
+      }
     })
     .on('mousemove', (event) => {
       tooltip
