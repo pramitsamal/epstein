@@ -9,7 +9,11 @@ import path from 'path';
 const app = express();
 const PORT = process.env.PORT || 3001;
 const DB_PATH = process.env.DB_PATH || 'document_analysis.db';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000', 'https://epsteinvisualizer.com', 'https://www.epsteinvisualizer.com'];
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.trim())
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'https://epsteinvisualizer.com', 'https://www.epsteinvisualizer.com'];
+
+console.log('Allowed CORS origins:', ALLOWED_ORIGINS);
 
 // CORS configuration with origin whitelist
 app.use(cors({
